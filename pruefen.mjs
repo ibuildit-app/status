@@ -22,15 +22,16 @@ const INTERN = [
   { id: "server-tls", name: "Zertifikat ibuildit.org", tls: "ibuildit.org:443", tage: 14 },
   { id: "portal-tls", name: "Zertifikat portal", tls: "portal.ibuildit.org:443", tage: 14 },
   { id: "supabase-status", name: "Supabase (Anbieter)", url: "https://status.supabase.com/api/v2/status.json", json: true },
-  { id: "anthropic-status", name: "Claude-API (Anbieter)", url: "https://status.anthropic.com/api/v2/status.json", json: true },
+  { id: "anthropic-status", name: "Claude-API (Anbieter)", url: "https://status.claude.com/api/v2/status.json", json: true },
 ];
 
 async function http(d) {
   if (!d.url) return { ok: null, ms: null, info: "nicht eingerichtet" };
   const t0 = Date.now();
   try {
-    const r = await fetch(d.url, { redirect: "manual", signal: AbortSignal.timeout(10000), headers: d.json ? {} : { "user-agent": "ibuildit-status" } });
-    if (d.json) { const j = await r.json(); return { ok: j?.status?.indicator === "none", ms: Date.now() - t0, info: j?.status?.description ?? null }; }
+    const r = await fetch(d.url, { redirect: d.json ? "follow" : "manual", signal: AbortSignal.timeout(10000), headers: d.json ? {} : { "user-agent": "ibuildit-status" } });
+    if (d.json) { const j = await r.json().catch(() => null); if (!j) return { ok: null, ms: Date.now() - t0, info: `keine Statusdaten (Antwort ${r.status})` }; // „minor“ (teilweise eingeschränkt) ist kein Ausfall, erst „major“ oder „critical“
+      const ind = j?.status?.indicator; return { ok: ind === "none" || ind === "minor", ms: Date.now() - t0, info: ind === "none" ? null : j?.status?.description ?? null }; }
     const ok = d.ok(r.status);
     return { ok, ms: Date.now() - t0, info: ok ? null : `Antwort ${r.status}` };
   } catch (e) { return { ok: false, ms: null, info: e?.name === "TimeoutError" ? "keine Antwort in 10 s" : String(e?.message ?? e).slice(0, 120) }; }
