@@ -1,0 +1,48 @@
+# Statusprüfung alle 5 Minuten (öffentliches Repo: Minuten kostenlos). Im privaten Repo „status-intern“:
+# cron "*/30 * * * *" und ART: intern (Kontingent privater Repos).
+name: Status prüfen
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: status
+  cancel-in-progress: false
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      ART: oeffentlich
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      TWENTY_URL: ${{ secrets.TWENTY_URL }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node pruefen.mjs "$ART"
+      - name: Ergebnis sichern
+        run: |
+          git config user.name "ibuildit-status"
+          git config user.email "status@ibuildit.org"
+          git add status.json verlauf.json
+          git diff --cached --quiet || (git commit -m "Status $(date -u +%H:%M)" -q && git push -q)
+      - name: Ausfall melden (Issue, GitHub schickt eine Mail)
+        if: hashFiles('ausfall.txt') != ''
+        run: |
+          offen=$(gh issue list --label ausfall --state open --json number --jq 'length')
+          if [ "$offen" = "0" ]; then
+            gh label create ausfall --color d93f0b --force >/dev/null
+            gh issue create --title "Ausfall: $(head -1 ausfall.txt | cut -c1-80)" --body-file ausfall.txt --label ausfall
+          fi
+      - name: Wieder da (Issue schließen)
+        if: hashFiles('ausfall.txt') == ''
+        run: |
+          for n in $(gh issue list --label ausfall --state open --json number --jq '.[].number'); do
+            gh issue close "$n" --comment "Alle Dienste laufen wieder ($(date -u '+%d.%m.%Y %H:%M') UTC)."
+          done

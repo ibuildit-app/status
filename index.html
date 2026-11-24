@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iBuildit Status</title>
+<meta name="description" content="Aktueller Zustand aller Dienste von iBuildit: App, QR-Kurzlinks, Hersteller-Portal, Anmeldung, Meldungen, E-Mail.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2.5l11.7 6.75v13.5L16 29.5 4.3 22.75V9.25z' fill='%23f26300'/%3E%3Cpath d='M10.5 16.5l3.8 3.8 7.2-8' fill='none' stroke='%23fff' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root { --page: #f5f5f7; --paper: #fff; --ink: #1d1d1f; --ink-3: #86868b; --line: #e5e5ea; --logo: #f26300; --ok: #157f45; --teil: #e8a200; --weg: #c8371d; color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+  header b { font-size: 20px; letter-spacing: -0.01em; }
+  header span { color: var(--ink-3); font-size: 15px; }
+  .lage { display: flex; align-items: center; gap: 14px; padding: 22px; border-radius: 20px; background: var(--paper); border: 1px solid var(--line); margin-bottom: 18px; }
+  .lage svg { flex: none; }
+  .lage h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+  .lage p { margin: 2px 0 0; color: var(--ink-3); font-size: 13px; }
+  ul { list-style: none; margin: 0; padding: 6px 18px; border-radius: 20px; background: var(--paper); border: 1px solid var(--line); }
+  li { padding: 14px 0; border-top: 1px solid var(--line); }
+  li:first-child { border-top: 0; }
+  .kopf { display: flex; align-items: center; gap: 10px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #d5d7de; flex: none; }
+  .dot.ok { background: var(--ok); } .dot.weg { background: var(--weg); box-shadow: 0 0 0 4px rgba(200, 55, 29, .18); }
+  .name { flex: 1; min-width: 0; }
+  .wert { color: var(--ink-3); font-size: 13px; white-space: nowrap; }
+  .tage { display: flex; gap: 2px; margin-top: 10px; height: 26px; }
+  .tage i { flex: 1; border-radius: 2px; background: #e5e5ea; }
+  .tage i.ok { background: var(--ok); } .tage i.teil { background: var(--teil); } .tage i.weg { background: var(--weg); }
+  .achse { display: flex; justify-content: space-between; color: var(--ink-3); font-size: 11px; margin-top: 4px; }
+  .info { color: var(--weg); font-size: 13px; margin-top: 4px; }
+  footer { margin-top: 22px; color: var(--ink-3); font-size: 12px; text-align: center; }
+  footer a { color: #b84800; text-decoration: none; }
+  @media (max-width: 520px) { .tage { height: 20px; gap: 1px; } .lage { padding: 16px; } .lage h1 { font-size: 19px; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5l11.7 6.75v13.5L16 29.5 4.3 22.75V9.25z" fill="#f26300"/><path d="M10.5 16.5l3.8 3.8 7.2-8" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <b>iBuildit</b><span>Status</span>
+  </header>
+  <section class="lage" id="lage" aria-live="polite"><div><h1>Status wird geladen …</h1><p>&nbsp;</p></div></section>
+  <ul id="liste"></ul>
+  <footer>Geprüft alle 5 Minuten von außerhalb unserer Server. <a href="https://ibuildit.org">ibuildit.org</a></footer>
+</main>
+<script>
+const TAGE = 90;
+const haken = '<svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#157f45"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const warn = '<svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#c8371d"/><path d="M12 7v6M12 16.5v.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+async function laden() {
+  try {
+    const [s, v] = await Promise.all([fetch("status.json", { cache: "no-store" }).then((r) => r.json()), fetch("verlauf.json", { cache: "no-store" }).then((r) => r.json()).catch(() => ({}))]);
+    const aktiv = s.dienste.filter((d) => d.ok !== null);
+    const weg = aktiv.filter((d) => !d.ok);
+    const zeit = new Date(s.geprueft).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
+    document.getElementById("lage").innerHTML = (weg.length ? warn : haken) + `<div><h1>${weg.length ? (weg.length === 1 ? "Ein Dienst ist gestört" : weg.length + " Dienste sind gestört") : "Alle Systeme laufen"}</h1><p>Zuletzt geprüft: ${zeit}</p></div>`;
+    const heute = new Date(); heute.setUTCHours(0, 0, 0, 0);
+    const tage = Array.from({ length: TAGE }, (_, i) => new Date(heute.getTime() - (TAGE - 1 - i) * 864e5).toISOString().slice(0, 10));
+    document.getElementById("liste").innerHTML = aktiv.map((d) => {
+      const h = v[d.id] || {};
+      const sum = Object.values(h).reduce((a, t) => ({ ok: a.ok + t.ok, n: a.n + t.n }), { ok: 0, n: 0 });
+      const p = sum.n ? (sum.ok / sum.n) * 100 : null;
+      const balken = tage.map((t) => { const x = h[t]; if (!x) return '<i title="' + t + ': keine Daten"></i>'; const q = (x.ok / x.n) * 100; return `<i class="${q >= 99.5 ? "ok" : q >= 95 ? "teil" : "weg"}" title="${t}: ${q.toFixed(2).replace(".", ",")} %"></i>`; }).join("");
+      return `<li><div class="kopf"><i class="dot ${d.ok ? "ok" : "weg"}"></i><span class="name">${esc(d.name)}</span><span class="wert">${p === null ? "" : (p >= 99.995 ? "100" : p.toFixed(2).replace(".", ",")) + " % in 90 Tagen"}</span></div>${d.ok ? "" : `<div class="info">${esc(d.info || "gestört")}</div>`}<div class="tage">${balken}</div><div class="achse"><span>vor 90 Tagen</span><span>heute</span></div></li>`;
+    }).join("");
+  } catch { document.getElementById("lage").innerHTML = warn + "<div><h1>Status gerade nicht abrufbar</h1><p>Bitte gleich noch einmal versuchen.</p></div>"; }
+}
+laden(); setInterval(laden, 60000);
+</script>
+</body>
+</html>
