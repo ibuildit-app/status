@@ -1,46 +1,46 @@
 {
- "geprueft": "2026-11-25T23:43:52.213Z",
+ "geprueft": "2026-11-26T05:28:52.878Z",
  "dienste": [
   {
    "id": "app",
    "name": "App und Anleitungen",
    "ok": true,
-   "ms": 746,
+   "ms": 704,
    "info": null
   },
   {
    "id": "kurzlinks",
    "name": "QR-Kurzlinks",
    "ok": true,
-   "ms": 675,
+   "ms": 634,
    "info": null
   },
   {
    "id": "portal",
    "name": "Hersteller-Portal",
    "ok": true,
-   "ms": 547,
+   "ms": 622,
    "info": null
   },
   {
    "id": "anmeldung",
    "name": "Anmeldung",
    "ok": true,
-   "ms": 327,
+   "ms": 293,
    "info": null
   },
   {
    "id": "datenbank",
    "name": "Meldungen und Tickets",
    "ok": true,
-   "ms": 52,
+   "ms": 80,
    "info": null
   },
   {
    "id": "mail",
    "name": "E-Mail-Versand",
    "ok": true,
-   "ms": 39,
+   "ms": 43,
    "info": null
   }
  ]
